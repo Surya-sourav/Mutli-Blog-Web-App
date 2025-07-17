@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { Prisma, PrismaClient } from '@prisma/client/extension';
 import { env } from 'hono/adapter';
 import {decode , sign , verify} from "hono/jwt";
+import { signinInput, signupInput } from '@suryeah/common-app';
 
 export const userRouter = new Hono<{
     Bindings : {
@@ -18,6 +19,13 @@ userRouter.post('/api/v1/signup' , async(c)=>
     })
 
     const body = await c.req.json();
+    const {success} = signupInput.safeParse(body);
+    if(!success) 
+    {
+        c.status(400);
+        return c.json({error : "Invalid input"});
+    }
+    try {
    const user =  await prisma.user.create({
             data : {
                 email : body.email,
@@ -25,8 +33,16 @@ userRouter.post('/api/v1/signup' , async(c)=>
             },
         })
 
-        const token = await sign({id : user.id}, c.env.JWT_SECRET)
+        const jwt = await sign({id : user.id}, c.env.JWT_SECRET);
+        return c.json({jwt});
+    }
+    catch(e)
+    {
+        c.status(403);
+        return c.json({error : "error while signing up"});
+    }
 });
+
 
 userRouter.post('/api/v1/signin' , async (c)=>
 {
@@ -36,6 +52,13 @@ userRouter.post('/api/v1/signin' , async (c)=>
         }
     )
     const body = await c.req.json();
+    const {success} = signinInput.safeParse(body);
+    if(!success)
+    {
+        c.status(400);
+        return c.json("Invalid Input")
+    }
+    
     const user = await prisma.user.findUnique(
         {
             where : {

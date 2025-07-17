@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { Prisma, PrismaClient } from '@prisma/client/extension';
 import { env } from 'hono/adapter';
 import {decode , sign , verify} from "hono/jwt";
+import { createPostInput, updatePostInput } from '@suryeah/common-app';
 
 export const blogRouter = new Hono<{
     Bindings : {
@@ -28,6 +29,12 @@ blogRouter.post('/' , async(c)=>
         })
 
         const body = await c.req.json();
+        const {success} = createPostInput.safeParse(body);
+        if(!success)
+        {
+            c.status(400);
+            return c.json("Invalid Format");
+        }
         const post = await prisma.post.create({
             data:{
                 title : body.title,
@@ -51,6 +58,12 @@ blogRouter.put('/' , async(c)=>
         }
     )
     const body = await c.req.json();
+    const {success} = updatePostInput.safeParse(body);
+    if(!success)
+    {
+        c.status(400);
+        return c.json("Invalid Input");
+    }
     prisma.post.update(
         {
             where: {
